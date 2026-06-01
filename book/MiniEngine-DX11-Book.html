@@ -2,32 +2,45 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
 <title>DX11로 배우는 컴퓨터 그래픽스</title>
 <style>
 :root { --fg:#222; --muted:#666; --accent:#2b6cb0; --bg:#fff; --code-bg:#f6f8fa; --border:#e2e8f0; }
 * { box-sizing: border-box; }
-body { margin:0; color:var(--fg); background:var(--bg);
+html { -webkit-text-size-adjust: 100%; }
+body { margin:0; color:var(--fg); background:var(--bg); font-size:16px; line-height:1.75;
   font-family:"Malgun Gothic","맑은 고딕","Apple SD Gothic Neo",system-ui,sans-serif;
-  line-height:1.75; }
-#sidebar { position:fixed; top:0; left:0; width:300px; height:100vh; overflow-y:auto;
-  border-right:1px solid var(--border); padding:20px 16px; background:#fafbfc; font-size:14px; }
+  word-break: keep-all; overflow-wrap:anywhere; }
+
+/* 상단바 (모바일 전용) */
+#topbar { display:none; position:sticky; top:0; z-index:30; background:var(--accent); color:#fff;
+  align-items:center; gap:12px; padding:11px 14px; }
+#topbar button { background:none; border:none; color:#fff; font-size:22px; line-height:1; cursor:pointer; padding:0 4px; }
+#topbar .t { font-weight:700; font-size:15px; }
+
+#backdrop { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:40; }
+
+#sidebar { position:fixed; top:0; left:0; width:300px; height:100vh; overflow-y:auto; z-index:50;
+  border-right:1px solid var(--border); padding:20px 16px; background:#fafbfc; font-size:14px;
+  -webkit-overflow-scrolling:touch; }
 #sidebar h2 { font-size:15px; margin:0 0 10px; color:var(--accent); }
 #sidebar .toc ul { list-style:none; padding-left:14px; margin:4px 0; }
 #sidebar .toc > ul { padding-left:0; }
-#sidebar .toc a { color:#334; text-decoration:none; display:block; padding:2px 0; }
+#sidebar .toc a { color:#334; text-decoration:none; display:block; padding:4px 0; }
 #sidebar .toc a:hover { color:var(--accent); }
 #sidebar .toc > ul > li > a { font-weight:700; margin-top:8px; color:#111; }
+
 #content { margin-left:300px; padding:48px 56px; max-width:880px; }
-h1 { border-bottom:2px solid var(--accent); padding-bottom:8px; margin-top:64px; }
-h2 { border-bottom:1px solid var(--border); padding-bottom:5px; margin-top:44px; }
+h1 { border-bottom:2px solid var(--accent); padding-bottom:8px; margin-top:64px; line-height:1.35; }
+h2 { border-bottom:1px solid var(--border); padding-bottom:5px; margin-top:44px; line-height:1.4; }
 h3 { margin-top:30px; }
 code { background:var(--code-bg); padding:2px 5px; border-radius:4px; font-size:0.9em;
   font-family:Consolas,"D2Coding",monospace; }
 pre { background:var(--code-bg); border:1px solid var(--border); border-radius:8px;
-  padding:14px 16px; overflow-x:auto; line-height:1.5; }
-pre code { background:none; padding:0; }
-img { max-width:100%; border-radius:8px; box-shadow:0 1px 6px rgba(0,0,0,.12); display:block; margin:16px auto; }
+  padding:14px 16px; overflow-x:auto; line-height:1.5; -webkit-overflow-scrolling:touch; }
+pre code { background:none; padding:0; white-space:pre; word-break:normal; overflow-wrap:normal; }
+img { max-width:100%; height:auto; border-radius:8px; box-shadow:0 1px 6px rgba(0,0,0,.12); display:block; margin:16px auto; }
 table { border-collapse:collapse; margin:16px 0; width:100%; font-size:0.95em; }
 th,td { border:1px solid var(--border); padding:7px 11px; text-align:left; }
 th { background:#f1f5f9; }
@@ -40,7 +53,31 @@ a { color:var(--accent); }
 .cover { text-align:center; padding:60px 0 30px; }
 .cover h1 { border:none; font-size:34px; }
 .cover p { color:var(--muted); }
-@media print { #sidebar{display:none} #content{margin:0;max-width:100%} }
+
+/* ===== 모바일 (폰/좁은 화면) ===== */
+@media (max-width: 900px) {
+  #topbar { display:flex; }
+  #sidebar { transform:translateX(-100%); transition:transform .25s ease; box-shadow:2px 0 14px rgba(0,0,0,.18); }
+  body.nav-open #sidebar { transform:translateX(0); }
+  body.nav-open #backdrop { display:block; }
+  #content { margin-left:0; padding:18px 16px 60px; max-width:100%; }
+  h1 { margin-top:34px; font-size:23px; }
+  h2 { margin-top:34px; font-size:19px; }
+  h3 { font-size:17px; }
+  .cover { padding:26px 0 8px; }
+  .cover h1 { font-size:25px; }
+  pre { font-size:13px; padding:12px; }
+  table { font-size:0.88em; }
+  /* 넓은 표는 가로 스크롤 */
+  #content table { display:block; width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+}
+
+@media print {
+  #topbar, #backdrop { display:none !important; }
+  #sidebar { display:none; }
+  #content { margin:0; max-width:100%; }
+}
+
 pre { line-height: 125%; }
 td.linenos .normal { color: inherit; background-color: transparent; padding-left: 5px; padding-right: 5px; }
 span.linenos { color: inherit; background-color: transparent; padding-left: 5px; padding-right: 5px; }
@@ -119,6 +156,8 @@ span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 
 </style>
 </head>
 <body>
+<div id="topbar"><button id="navToggle" aria-label="목차 열기">&#9776;</button><span class="t">DX11로 배우는 컴퓨터 그래픽스</span></div>
+<div id="backdrop"></div>
 <nav id="sidebar"><h2>목차</h2><div class="toc">
 <ul>
 <li><a href="#_1">머리말 · 커리큘럼</a><ul>
@@ -444,6 +483,7 @@ DirectX, 선형대수, 그래픽스 이론을 처음 접해도 따라올 수 있
 <hr />
 <h3 id="_5">📚 함께 보면 좋은 자료</h3>
 <ul>
+<li><strong><em>*📖 책으로 읽기</em></strong>* — 모든 레슨(코드+설명)을 한 권으로 엮은 책. <code>book/MiniEngine-DX11-Book.html</code>을 더블클릭하면 사이드바 목차·코드 하이라이트가 있는 오프라인 책이 열립니다. (<code>Ctrl+P</code>로 PDF 저장 가능)</li>
 <li><strong><em>*🧑‍🏫 AI 튜터 프롬프트</em></strong>* — 새 AI 대화에서 이 저장소를 1:1 선생님과 공부하는 법. (학습자용)</li>
 <li><strong><em>*게임 수학 빠른 안내</em></strong>* — 삼각함수/벡터/행렬이 가물가물하면 여기부터.</li>
 </ul>
@@ -3498,5 +3538,21 @@ a · b = |a||b| cos θ               (의미: θ는 두 벡터 사이 각)
 <p>행운을 빕니다. 차근차근 가면 반드시 됩니다. 🚀</p>
 <hr />
 </main>
+
+<script>
+(function(){
+  var b = document.body;
+  var btn = document.getElementById('navToggle');
+  var bd  = document.getElementById('backdrop');
+  var sb  = document.getElementById('sidebar');
+  function close(){ b.classList.remove('nav-open'); }
+  if (btn) btn.addEventListener('click', function(){ b.classList.toggle('nav-open'); });
+  if (bd)  bd.addEventListener('click', close);
+  // 목차 링크를 누르면 (모바일) 서랍을 닫는다
+  if (sb)  sb.addEventListener('click', function(e){ if (e.target.tagName === 'A') close(); });
+  document.addEventListener('keydown', function(e){ if (e.key === 'Escape') close(); });
+})();
+</script>
+
 </body>
 </html>
