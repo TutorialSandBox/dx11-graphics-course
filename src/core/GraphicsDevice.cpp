@@ -48,7 +48,25 @@ bool GraphicsDevice::Initialize(HWND hwnd, uint32_t width, uint32_t height) {
     Hr(hr, "D3D11CreateDeviceAndSwapChain");
 
     CreateBackbufferRTV();
+    CreateDepthBuffer();
     return true;
+}
+
+// 깊이 버퍼(z-buffer): 각 픽셀의 "카메라로부터의 깊이"를 저장하는 텍스처.
+//   앞/뒤를 판정해 가까운 것이 먼 것을 가리게 한다(Part 4.1).
+void GraphicsDevice::CreateDepthBuffer() {
+    D3D11_TEXTURE2D_DESC td{};
+    td.Width      = m_width;
+    td.Height     = m_height;
+    td.MipLevels  = 1;
+    td.ArraySize  = 1;
+    td.Format     = DXGI_FORMAT_D24_UNORM_S8_UINT;   // 24비트 깊이 + 8비트 스텐실
+    td.SampleDesc.Count = 1;
+    td.Usage      = D3D11_USAGE_DEFAULT;
+    td.BindFlags  = D3D11_BIND_DEPTH_STENCIL;
+    Hr(m_device->CreateTexture2D(&td, nullptr, &m_depthTexture), "CreateTexture2D(depth)");
+    Hr(m_device->CreateDepthStencilView(m_depthTexture.Get(), nullptr, &m_depthDSV),
+       "CreateDepthStencilView");
 }
 
 // 백버퍼 텍스처를 얻어 "렌더 타깃 뷰(RTV)"를 만든다. (여기에 그림을 그림)
@@ -68,14 +86,18 @@ void GraphicsDevice::Resize(uint32_t width, uint32_t height) {
     // 백버퍼 크기를 바꾸려면 먼저 그것을 가리키던 뷰를 모두 풀어야 한다.
     m_context->OMSetRenderTargets(0, nullptr, nullptr);
     m_backbufferRTV.Reset();
+    m_depthDSV.Reset();
+    m_depthTexture.Reset();
 
     Hr(m_swapChain->ResizeBuffers(0, width, height, DXGI_FORMAT_UNKNOWN, 0), "ResizeBuffers");
     CreateBackbufferRTV();
+    CreateDepthBuffer();
 }
 
-void GraphicsDevice::ClearBackbuffer(float r, float g, float b, float a) {
+void GraphicsDevice::ClearBackbuffer(float r, float g, float b, float a, bool useDepth) {
     ID3D11RenderTargetView* rtv = m_backbufferRTV.Get();
-    m_context->OMSetRenderTargets(1, &rtv, nullptr);   // "여기에 그려라"
+    ID3D11DepthStencilView* dsv = useDepth ? m_depthDSV.Get() : nullptr;
+    m_context->OMSetRenderTargets(1, &rtv, dsv);   // "여기에(+깊이) 그려라"
 
     // 뷰포트: 클립공간(-1~1)을 실제 픽셀 영역으로 매핑하는 사각형.
     D3D11_VIEWPORT vp{};
@@ -86,6 +108,8 @@ void GraphicsDevice::ClearBackbuffer(float r, float g, float b, float a) {
 
     const float color[4] = { r, g, b, a };
     m_context->ClearRenderTargetView(rtv, color);
+    if (dsv)
+        m_context->ClearDepthStencilView(dsv, D3D11_CLEAR_DEPTH, 1.0f, 0);   // 깊이=1(가장 멀리)로 초기화
 }
 
 void GraphicsDevice::Present(bool vsync) {

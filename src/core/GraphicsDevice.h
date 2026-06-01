@@ -18,8 +18,9 @@ public:
     bool Initialize(HWND hwnd, uint32_t width, uint32_t height);
     void Resize(uint32_t width, uint32_t height);
 
-    // 백버퍼를 단색으로 지우고, 렌더 타깃 + 뷰포트를 바인딩한다.
-    void ClearBackbuffer(float r, float g, float b, float a = 1.0f);
+    // 백버퍼를 단색으로 지우고, 렌더 타깃(+깊이 버퍼) + 뷰포트를 바인딩한다.
+    //   useDepth=true 면 깊이 버퍼도 함께 클리어/바인딩 (3D 큐브부터 필요 — Part 4).
+    void ClearBackbuffer(float r, float g, float b, float a = 1.0f, bool useDepth = true);
     // 다 그린 백버퍼를 화면에 표시 (vsync=true면 수직동기화 대기 → 동기화 역할).
     void Present(bool vsync = true);
 
@@ -29,16 +30,20 @@ public:
     ID3D11Device*           Device()        const { return m_device.Get(); }
     ID3D11DeviceContext*    Context()       const { return m_context.Get(); }
     ID3D11RenderTargetView* BackbufferRTV() const { return m_backbufferRTV.Get(); }
+    ID3D11DepthStencilView* DepthDSV()      const { return m_depthDSV.Get(); }
     uint32_t Width()  const { return m_width; }
     uint32_t Height() const { return m_height; }
 
 private:
     void CreateBackbufferRTV();
+    void CreateDepthBuffer();
 
     ComPtr<ID3D11Device>           m_device;
     ComPtr<ID3D11DeviceContext>    m_context;       // ImmediateContext
     ComPtr<IDXGISwapChain>         m_swapChain;
     ComPtr<ID3D11RenderTargetView> m_backbufferRTV;
+    ComPtr<ID3D11Texture2D>        m_depthTexture;  // 깊이 버퍼 텍스처
+    ComPtr<ID3D11DepthStencilView> m_depthDSV;      // 깊이 버퍼를 쓰는 뷰
     uint32_t m_width = 0, m_height = 0;
 };
 

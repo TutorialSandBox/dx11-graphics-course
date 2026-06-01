@@ -85,6 +85,7 @@
     <ClCompile Include="src\core\GraphicsDevice.cpp" />
     <ClCompile Include="src\render\ShaderUtil.cpp" />
     <ClCompile Include="src\render\TriangleRenderer.cpp" />
+    <ClCompile Include="src\render\CubeRenderer.cpp" />
     <ClCompile Include="src\math\Vector2.cpp" />
     <ClCompile Include="src\math\Vector3.cpp" />
     <ClCompile Include="src\math\Vector4.cpp" />
@@ -98,6 +99,8 @@
     <ClInclude Include="src\core\GraphicsDevice.h" />
     <ClInclude Include="src\render\ShaderUtil.h" />
     <ClInclude Include="src\render\TriangleRenderer.h" />
+    <ClInclude Include="src\render\CubeRenderer.h" />
+    <ClInclude Include="src\render\Vertex.h" />
     <ClInclude Include="src\math\MathCommon.h" />
     <ClInclude Include="src\math\Vector2.h" />
     <ClInclude Include="src\math\Vector3.h" />
@@ -106,6 +109,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="src\shaders\triangle.hlsl" />
+    <None Include="src\shaders\cube.hlsl" />
   </ItemGroup>
 
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

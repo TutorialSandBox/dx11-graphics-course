@@ -3,7 +3,7 @@
 #include "app/Win32Window.h"
 #include "app/Input.h"
 #include "core/GraphicsDevice.h"
-#include "render/TriangleRenderer.h"
+#include "render/CubeRenderer.h"
 #include <cstdint>
 #include <string>
 
@@ -25,10 +25,10 @@ private:
     void Frame(float dt, float time, bool capture);
     std::wstring ExecutableDir() const;
 
-    Win32Window              m_window;
-    Input                    m_input;
-    core::GraphicsDevice     m_gfx;
-    render::TriangleRenderer m_triangle;
+    Win32Window          m_window;
+    Input                m_input;
+    core::GraphicsDevice m_gfx;
+    render::CubeRenderer m_cube;
 
     std::wstring m_capturePath;
 

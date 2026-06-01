@@ -1,4 +1,6 @@
 #include "app/Application.h"
+#include "math/MathCommon.h"
+#include "math/Vector3.h"
 #include <Windows.h>
 #include <cmath>
 
@@ -12,7 +14,7 @@ std::wstring Application::ExecutableDir() const {
 }
 
 bool Application::Initialize() {
-    if (!m_window.Create(L"MiniEngine (Part 3.3) - 상수 버퍼로 삼각형 회전", 1280, 720))
+    if (!m_window.Create(L"MiniEngine (Part 4.1) - 3D 큐브와 깊이 버퍼", 1280, 720))
         return false;
     m_window.SetInput(&m_input);
     m_window.SetOnResize([this](uint32_t w, uint32_t h) { m_gfx.Resize(w, h); });
@@ -20,7 +22,7 @@ bool Application::Initialize() {
     if (!m_gfx.Initialize(m_window.Handle(), m_window.Width(), m_window.Height()))
         return false;
 
-    m_triangle.Initialize(m_gfx.Device(), ExecutableDir() + L"\\shaders");
+    m_cube.Initialize(m_gfx.Device(), ExecutableDir() + L"\\shaders");
 
     QueryPerformanceFrequency(reinterpret_cast<LARGE_INTEGER*>(&m_tickFreq));
     QueryPerformanceCounter(reinterpret_cast<LARGE_INTEGER*>(&m_startTick));
@@ -29,15 +31,20 @@ bool Application::Initialize() {
 }
 
 void Application::Frame(float dt, float time, bool capture) {
-    m_gfx.ClearBackbuffer(0.10f, 0.12f, 0.18f);   // 어두운 남색 배경
+    m_gfx.ClearBackbuffer(0.10f, 0.12f, 0.18f);   // 배경 + 깊이 버퍼 클리어
 
-    // 시간에 따라 Z축 회전 + 종횡비 보정(x를 1/aspect 로 줄여 삼각형이 안 찌그러지게).
-    //   행벡터 규약: v * (Rotation * AspectScale) = 먼저 회전, 그 다음 화면비 보정.
-    const float aspect = m_window.Aspect();
-    Math::Matrix transform =
-        Math::Matrix::RotationZ(time) *
-        Math::Matrix::Scaling({ 1.0f / aspect, 1.0f, 1.0f });
-    m_triangle.Render(m_gfx.Context(), transform);
+    // --- MVP 조립 (Part 1.4) ---
+    using Math::Matrix;
+    using Math::Vector3;
+    // 모델: 두 축으로 천천히 회전 (큐브의 여러 면을 보여주기 위해)
+    Matrix model = Matrix::RotationY(time * 0.6f) * Matrix::RotationX(time * 0.3f);
+    // 뷰: 카메라를 (0, 0.4, -3)에 두고 +Z(앞)를 바라봄 (자유 카메라는 Part 5)
+    Matrix view = Matrix::LookToLH({ 0.0f, 0.4f, -3.0f }, Vector3::Forward(), Vector3::Up());
+    // 투영: 원근
+    Matrix proj = Matrix::PerspectiveFovLH(Math::ToRadians(60.0f), m_window.Aspect(), 0.1f, 100.0f);
+
+    Matrix mvp = model * view * proj;
+    m_cube.Render(m_gfx.Context(), mvp);
 
     if (capture && !m_capturePath.empty())
         m_gfx.CaptureBackbufferToBMP(m_capturePath.c_str());   // Present 전에 캡처
