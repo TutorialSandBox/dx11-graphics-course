@@ -11,8 +11,18 @@ using Math::Vector3;
 using Math::Matrix;
 
 // --- 상수 버퍼 레이아웃 (HLSL과 일치) ---
-struct GeomCB { Matrix mvp; Matrix world; };                       // 128B
-struct LightCB { float eyePos[4]; float dirL[4]; float dirColor[4]; };  // 48B (7.1: 방향광)
+struct GeomCB { Matrix mvp; Matrix world; };   // 128B
+
+// HLSL LightCB 와 정확히 일치해야 함. 192바이트.
+struct LightCB {
+    float eyePos[4];
+    float dirL[4];
+    float dirColor[4];
+    float ptPos[4][4];      // [k] = (x,y,z,radius)
+    float ptColor[4][4];    // [k] = (r,g,b,_)
+    int   numPoints;
+    float pad[3];
+};
 
 static void MakeCube(std::vector<Vertex>& v, std::vector<uint16_t>& idx) {
     const float h = 0.5f;
@@ -138,6 +148,13 @@ void DeferredRenderer::Render(ID3D11DeviceContext* ctx, ID3D11RenderTargetView* 
     lcb.eyePos[0]=lights.eyePos.x; lcb.eyePos[1]=lights.eyePos.y; lcb.eyePos[2]=lights.eyePos.z;
     lcb.dirL[0]=lights.dirLightDir.x; lcb.dirL[1]=lights.dirLightDir.y; lcb.dirL[2]=lights.dirLightDir.z;
     lcb.dirColor[0]=lights.dirLightColor.x; lcb.dirColor[1]=lights.dirLightColor.y; lcb.dirColor[2]=lights.dirLightColor.z;
+    lcb.numPoints = lights.numPoints;
+    for (int k = 0; k < lights.numPoints && k < 4; ++k) {
+        lcb.ptPos[k][0]=lights.points[k].position.x; lcb.ptPos[k][1]=lights.points[k].position.y;
+        lcb.ptPos[k][2]=lights.points[k].position.z; lcb.ptPos[k][3]=lights.points[k].radius;
+        lcb.ptColor[k][0]=lights.points[k].color.x; lcb.ptColor[k][1]=lights.points[k].color.y;
+        lcb.ptColor[k][2]=lights.points[k].color.z; lcb.ptColor[k][3]=0.0f;
+    }
     ctx->Map(m_lightCB.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &m); memcpy(m.pData, &lcb, sizeof(lcb)); ctx->Unmap(m_lightCB.Get(), 0);
 
     ID3D11Buffer* lcbB = m_lightCB.Get();

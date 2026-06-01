@@ -4,9 +4,13 @@
 
 cbuffer LightCB : register(b0)
 {
-    float4 gEyePos;     // xyz = 카메라 위치 (지금은 미사용, 향후 스페큘러용)
-    float4 gDirL;       // xyz = "빛으로 향하는" 방향(L)
-    float4 gDirColor;   // rgb = 방향광 색
+    float4 gEyePos;       // xyz = 카메라 위치
+    float4 gDirL;         // xyz = "빛으로 향하는" 방향(L)
+    float4 gDirColor;     // rgb = 방향광 색
+    float4 gPtPos[4];     // xyz = 점광원 위치, w = 반경
+    float4 gPtColor[4];   // rgb = 점광원 색
+    int    gNumPoints;    // 켜진 점광원 수
+    float3 _pad;
 };
 
 Texture2D    gAlbedo   : register(t0);
@@ -34,8 +38,21 @@ float4 PSMain(VSOut i) : SV_TARGET
 
     float3 albedo = alb.rgb;
     float3 N = normalize(gNormal.Sample(gSampler, i.uv).rgb * 2.0f - 1.0f);  // [0,1]→[-1,1]
+    float3 P = gPosition.Sample(gSampler, i.uv).rgb;                          // 월드 좌표
 
-    float3 color = albedo * 0.15f;                                   // 앰비언트
+    float3 color = albedo * 0.12f;                                   // 앰비언트
     color += albedo * gDirColor.rgb * saturate(dot(N, gDirL.xyz));   // 방향광 (N·L)
+
+    // 점광원: 위치가 있어 거리에 따라 어두워짐(감쇠, attenuation).
+    [loop]
+    for (int k = 0; k < gNumPoints; ++k)
+    {
+        float3 toL  = gPtPos[k].xyz - P;        // 표면 → 광원 방향
+        float  dist = length(toL);
+        float3 L    = toL / max(dist, 1e-4f);   // 정규화
+        float  att  = saturate(1.0f - dist / gPtPos[k].w);   // 반경 밖이면 0
+        att *= att;                              // 부드러운 감쇠
+        color += albedo * gPtColor[k].rgb * saturate(dot(N, L)) * att;
+    }
     return float4(color, 1.0f);
 }

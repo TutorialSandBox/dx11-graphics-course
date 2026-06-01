@@ -15,7 +15,7 @@ std::wstring Application::ExecutableDir() const {
 }
 
 bool Application::Initialize() {
-    if (!m_window.Create(L"MiniEngine (Part 7.1) - 디퍼드 렌더링", 1280, 720))
+    if (!m_window.Create(L"MiniEngine (Part 7.2) - 디퍼드 + 회전 3색 점광원", 1280, 720))
         return false;
     m_window.SetInput(&m_input);
     m_window.SetOnResize([this](uint32_t w, uint32_t h) {
@@ -68,7 +68,18 @@ void Application::Frame(float dt, float time, bool capture) {
     render::LightingData lights;
     lights.eyePos        = m_camera.Eye();
     lights.dirLightDir   = Vector3(0.4f, 0.8f, 0.3f).Normalized();
-    lights.dirLightColor = Vector3(0.8f, 0.78f, 0.72f);
+    lights.dirLightColor = Vector3(0.45f, 0.43f, 0.40f);   // 방향광은 은은하게 (점광원이 주인공)
+
+    // 회전하는 3색 점광원 — 큐브 둘레를 120도 간격으로 공전.
+    const Vector3 cols[3] = { {1.0f,0.25f,0.20f}, {0.25f,1.0f,0.35f}, {0.30f,0.45f,1.0f} };
+    const float twoPi = 6.2831853f;
+    lights.numPoints = 3;
+    for (int i = 0; i < 3; ++i) {
+        float a = time * 0.9f + i * (twoPi / 3.0f);
+        lights.points[i].position = Vector3(std::cos(a) * 2.2f, 0.6f, std::sin(a) * 2.2f);
+        lights.points[i].radius   = 4.5f;
+        lights.points[i].color    = cols[i];
+    }
 
     m_deferred.Render(m_gfx.Context(), m_gfx.BackbufferRTV(),
                       m_camera.ViewProj(), model, lights);
