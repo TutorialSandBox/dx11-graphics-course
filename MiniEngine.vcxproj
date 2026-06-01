@@ -83,9 +83,11 @@
     <ClCompile Include="src\app\Input.cpp" />
     <ClCompile Include="src\app\Application.cpp" />
     <ClCompile Include="src\core\GraphicsDevice.cpp" />
+    <ClCompile Include="src\core\GBuffer.cpp" />
     <ClCompile Include="src\render\ShaderUtil.cpp" />
     <ClCompile Include="src\render\TriangleRenderer.cpp" />
     <ClCompile Include="src\render\CubeRenderer.cpp" />
+    <ClCompile Include="src\render\DeferredRenderer.cpp" />
     <ClCompile Include="src\render\Texture.cpp" />
     <ClCompile Include="src\render\EditorCameraController.cpp" />
     <ClCompile Include="src\editor\ImGuiLayer.cpp" />
@@ -109,9 +111,12 @@
     <ClInclude Include="src\app\Application.h" />
     <ClInclude Include="src\core\DxCommon.h" />
     <ClInclude Include="src\core\GraphicsDevice.h" />
+    <ClInclude Include="src\core\GBuffer.h" />
     <ClInclude Include="src\render\ShaderUtil.h" />
     <ClInclude Include="src\render\TriangleRenderer.h" />
     <ClInclude Include="src\render\CubeRenderer.h" />
+    <ClInclude Include="src\render\DeferredRenderer.h" />
+    <ClInclude Include="src\render\Lights.h" />
     <ClInclude Include="src\render\Vertex.h" />
     <ClInclude Include="src\render\Texture.h" />
     <ClInclude Include="src\render\Camera.h" />
@@ -127,6 +132,8 @@
   <ItemGroup>
     <None Include="src\shaders\triangle.hlsl" />
     <None Include="src\shaders\cube.hlsl" />
+    <None Include="src\shaders\gbuffer.hlsl" />
+    <None Include="src\shaders\lighting.hlsl" />
   </ItemGroup>
 
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

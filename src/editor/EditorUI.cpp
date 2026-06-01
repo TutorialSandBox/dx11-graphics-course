@@ -9,7 +9,7 @@ void DrawEditor(const FrameInfo& info) {
     ImGui::SetNextWindowSize(ImVec2(340, 180), ImGuiCond_FirstUseEver);
 
     ImGui::Begin("MiniEngine");
-    ImGui::Text("DX11 미니엔진 (Forward 렌더링)");
+    ImGui::Text("DX11 미니엔진 (디퍼드 렌더링)");
     ImGui::Separator();
     ImGui::Text("FPS : %.1f  (%.2f ms)", info.fps, info.frameMs);
     ImGui::Text("Cam : %.2f, %.2f, %.2f",

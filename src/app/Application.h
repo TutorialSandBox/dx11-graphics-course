@@ -3,7 +3,7 @@
 #include "app/Win32Window.h"
 #include "app/Input.h"
 #include "core/GraphicsDevice.h"
-#include "render/CubeRenderer.h"
+#include "render/DeferredRenderer.h"
 #include "render/Camera.h"
 #include "render/EditorCameraController.h"
 #include "editor/ImGuiLayer.h"
@@ -31,7 +31,7 @@ private:
     Win32Window                    m_window;
     Input                          m_input;
     core::GraphicsDevice           m_gfx;
-    render::CubeRenderer           m_cube;
+    render::DeferredRenderer        m_deferred;
     render::Camera                 m_camera;
     render::EditorCameraController m_camController;
     editor::ImGuiLayer             m_ui;

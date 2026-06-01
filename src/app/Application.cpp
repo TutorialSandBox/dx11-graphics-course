@@ -15,11 +15,12 @@ std::wstring Application::ExecutableDir() const {
 }
 
 bool Application::Initialize() {
-    if (!m_window.Create(L"MiniEngine (Part 6) - ImGui 에디터", 1280, 720))
+    if (!m_window.Create(L"MiniEngine (Part 7.1) - 디퍼드 렌더링", 1280, 720))
         return false;
     m_window.SetInput(&m_input);
     m_window.SetOnResize([this](uint32_t w, uint32_t h) {
         m_gfx.Resize(w, h);
+        m_deferred.Resize(m_gfx.Device(), w, h);
         m_camera.SetAspect(m_window.Aspect());
     });
 
@@ -27,7 +28,8 @@ bool Application::Initialize() {
         return false;
 
     const std::wstring exeDir = ExecutableDir();
-    m_cube.Initialize(m_gfx.Device(), exeDir + L"\\shaders", exeDir + L"\\assets");
+    m_deferred.Initialize(m_gfx.Device(), exeDir + L"\\shaders", exeDir + L"\\assets",
+                          m_window.Width(), m_window.Height());
 
     m_camera.SetPerspective(Math::ToRadians(60.0f), m_window.Aspect(), 0.1f, 100.0f);
 
@@ -59,12 +61,17 @@ void Application::Frame(float dt, float time, bool capture) {
     if (!m_ui.WantCaptureMouse() && !m_ui.WantCaptureKeyboard())
         m_camController.Update(m_input, m_camera, dt);
 
-    m_gfx.ClearBackbuffer(0.10f, 0.12f, 0.18f);   // 배경 + 깊이 버퍼 클리어
-
+    // 디퍼드 렌더링: 지오메트리 패스(G-buffer) → 라이팅 패스(백버퍼).
+    //   라이팅 패스가 화면 전체를 덮어 그리므로 별도 ClearBackbuffer는 불필요.
     Matrix model = Matrix::RotationY(time * 0.3f);
-    Matrix mvp   = model * m_camera.ViewProj();
-    Vector3 lightDir = Vector3(0.4f, 0.8f, 0.3f).Normalized();
-    m_cube.Render(m_gfx.Context(), mvp, model, lightDir);
+
+    render::LightingData lights;
+    lights.eyePos        = m_camera.Eye();
+    lights.dirLightDir   = Vector3(0.4f, 0.8f, 0.3f).Normalized();
+    lights.dirLightColor = Vector3(0.8f, 0.78f, 0.72f);
+
+    m_deferred.Render(m_gfx.Context(), m_gfx.BackbufferRTV(),
+                      m_camera.ViewProj(), model, lights);
 
     m_ui.Render();   // 씬 위에 UI 합성
 
