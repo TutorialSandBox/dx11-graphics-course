@@ -1,10 +1,13 @@
 // cube.hlsl — 3D 큐브 (Forward 렌더링), DX11 / 셰이더 모델 5
-//   (4.1: 법선을 색으로 시각화 → 3D 입체감 확인. 텍스처/조명은 4.2~4.3에서 추가)
+//   (4.2: 텍스처를 입힘. 조명은 4.3에서 추가)
 
 cbuffer Transform : register(b0)
 {
     row_major float4x4 gMVP;   // Model * View * Projection
 };
+
+Texture2D    gTexture : register(t0);   // 입힐 이미지 (SRV 슬롯 0)
+SamplerState gSampler : register(s0);   // 샘플링 방법 (필터/주소 모드)
 
 struct VSInput  { float3 pos : POSITION; float3 nrm : NORMAL; float2 uv : TEXCOORD; };
 struct VSOutput { float4 pos : SV_POSITION; float3 nrm : NORMAL; float2 uv : TEXCOORD; };
@@ -20,6 +23,7 @@ VSOutput VSMain(VSInput i)
 
 float4 PSMain(VSOutput i) : SV_TARGET
 {
-    // 법선(-1~1)을 색(0~1)으로 변환해 면마다 다른 색 → 입체가 보이는지 확인용.
-    return float4(normalize(i.nrm) * 0.5f + 0.5f, 1.0f);
+    // UV 좌표로 텍스처에서 색을 읽어옴(샘플링).
+    float3 albedo = gTexture.Sample(gSampler, i.uv).rgb;
+    return float4(albedo, 1.0f);
 }

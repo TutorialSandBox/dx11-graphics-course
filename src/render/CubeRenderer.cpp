@@ -36,7 +36,7 @@ static void MakeCube(std::vector<Vertex>& v, std::vector<uint16_t>& idx) {
     }
 }
 
-void CubeRenderer::Initialize(ID3D11Device* device, const std::wstring& shaderDir) {
+void CubeRenderer::Initialize(ID3D11Device* device, const std::wstring& shaderDir, const std::wstring& assetsDir) {
     const std::wstring path = shaderDir + L"\\cube.hlsl";
 
     ComPtr<ID3DBlob> vsBlob = CompileShaderFromFile(path, "VSMain", "vs_5_0");
@@ -87,6 +87,16 @@ void CubeRenderer::Initialize(ID3D11Device* device, const std::wstring& shaderDi
     rs.FillMode = D3D11_FILL_SOLID;
     rs.CullMode = D3D11_CULL_BACK;
     Hr(device->CreateRasterizerState(&rs, &m_rasterState), "CreateRasterizerState");
+
+    // 텍스처 로드 + 샘플러(이미지에서 색을 어떻게 읽을지) 생성.
+    m_texture.LoadDDS(device, assetsDir + L"\\test.dds");
+
+    D3D11_SAMPLER_DESC sd{};
+    sd.Filter   = D3D11_FILTER_MIN_MAG_MIP_LINEAR;   // 부드러운 보간(선형 필터)
+    sd.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;        // UV가 0~1 밖이면 반복
+    sd.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+    sd.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+    Hr(device->CreateSamplerState(&sd, &m_sampler), "CreateSamplerState");
 }
 
 void CubeRenderer::Render(ID3D11DeviceContext* ctx, const Math::Matrix& mvp) {
@@ -104,10 +114,15 @@ void CubeRenderer::Render(ID3D11DeviceContext* ctx, const Math::Matrix& mvp) {
     ctx->IASetIndexBuffer(m_indexBuffer.Get(), DXGI_FORMAT_R16_UINT, 0);
     ctx->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
+    ID3D11ShaderResourceView* srv = m_texture.SRV();
+    ID3D11SamplerState* samp = m_sampler.Get();
+
     ctx->RSSetState(m_rasterState.Get());
     ctx->VSSetShader(m_vs.Get(), nullptr, 0);
     ctx->VSSetConstantBuffers(0, 1, &cb);
     ctx->PSSetShader(m_ps.Get(), nullptr, 0);
+    ctx->PSSetShaderResources(0, 1, &srv);   // t0 = 텍스처
+    ctx->PSSetSamplers(0, 1, &samp);         // s0 = 샘플러
 
     ctx->DrawIndexed(m_indexCount, 0, 0);   // 인덱스로 그리기 (정점 재사용)
 }

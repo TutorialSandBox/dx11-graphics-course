@@ -14,7 +14,7 @@ std::wstring Application::ExecutableDir() const {
 }
 
 bool Application::Initialize() {
-    if (!m_window.Create(L"MiniEngine (Part 4.1) - 3D 큐브와 깊이 버퍼", 1280, 720))
+    if (!m_window.Create(L"MiniEngine (Part 4.2) - 텍스처 큐브", 1280, 720))
         return false;
     m_window.SetInput(&m_input);
     m_window.SetOnResize([this](uint32_t w, uint32_t h) { m_gfx.Resize(w, h); });
@@ -22,7 +22,8 @@ bool Application::Initialize() {
     if (!m_gfx.Initialize(m_window.Handle(), m_window.Width(), m_window.Height()))
         return false;
 
-    m_cube.Initialize(m_gfx.Device(), ExecutableDir() + L"\\shaders");
+    const std::wstring exeDir = ExecutableDir();
+    m_cube.Initialize(m_gfx.Device(), exeDir + L"\\shaders", exeDir + L"\\assets");
 
     QueryPerformanceFrequency(reinterpret_cast<LARGE_INTEGER*>(&m_tickFreq));
     QueryPerformanceCounter(reinterpret_cast<LARGE_INTEGER*>(&m_startTick));

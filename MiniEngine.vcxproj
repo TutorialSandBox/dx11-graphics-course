@@ -86,6 +86,7 @@
     <ClCompile Include="src\render\ShaderUtil.cpp" />
     <ClCompile Include="src\render\TriangleRenderer.cpp" />
     <ClCompile Include="src\render\CubeRenderer.cpp" />
+    <ClCompile Include="src\render\Texture.cpp" />
     <ClCompile Include="src\math\Vector2.cpp" />
     <ClCompile Include="src\math\Vector3.cpp" />
     <ClCompile Include="src\math\Vector4.cpp" />
@@ -101,6 +102,7 @@
     <ClInclude Include="src\render\TriangleRenderer.h" />
     <ClInclude Include="src\render\CubeRenderer.h" />
     <ClInclude Include="src\render\Vertex.h" />
+    <ClInclude Include="src\render\Texture.h" />
     <ClInclude Include="src\math\MathCommon.h" />
     <ClInclude Include="src\math\Vector2.h" />
     <ClInclude Include="src\math\Vector3.h" />
@@ -121,5 +123,14 @@
     </ItemGroup>
     <MakeDir Directories="$(OutDir)shaders" />
     <Copy SourceFiles="@(ShaderFiles)" DestinationFolder="$(OutDir)shaders" SkipUnchangedFiles="true" />
+  </Target>
+
+  <!-- 에셋(.dds 등)을 출력폴더의 assets\ 로 복사 (런타임에 로드) -->
+  <Target Name="CopyAssets" AfterTargets="Build">
+    <ItemGroup>
+      <AssetFiles Include="$(SolutionDir)assets\*.*" />
+    </ItemGroup>
+    <MakeDir Directories="$(OutDir)assets" />
+    <Copy SourceFiles="@(AssetFiles)" DestinationFolder="$(OutDir)assets" SkipUnchangedFiles="true" />
   </Target>
 </Project>
