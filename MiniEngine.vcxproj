@@ -87,6 +87,7 @@
     <ClCompile Include="src\render\TriangleRenderer.cpp" />
     <ClCompile Include="src\render\CubeRenderer.cpp" />
     <ClCompile Include="src\render\Texture.cpp" />
+    <ClCompile Include="src\render\EditorCameraController.cpp" />
     <ClCompile Include="src\math\Vector2.cpp" />
     <ClCompile Include="src\math\Vector3.cpp" />
     <ClCompile Include="src\math\Vector4.cpp" />
@@ -103,6 +104,8 @@
     <ClInclude Include="src\render\CubeRenderer.h" />
     <ClInclude Include="src\render\Vertex.h" />
     <ClInclude Include="src\render\Texture.h" />
+    <ClInclude Include="src\render\Camera.h" />
+    <ClInclude Include="src\render\EditorCameraController.h" />
     <ClInclude Include="src\math\MathCommon.h" />
     <ClInclude Include="src\math\Vector2.h" />
     <ClInclude Include="src\math\Vector3.h" />

@@ -14,16 +14,21 @@ std::wstring Application::ExecutableDir() const {
 }
 
 bool Application::Initialize() {
-    if (!m_window.Create(L"MiniEngine (Part 4.3) - 텍스처 + 조명 큐브", 1280, 720))
+    if (!m_window.Create(L"MiniEngine (Part 5) - 자유비행 카메라 (우클릭+WASD)", 1280, 720))
         return false;
     m_window.SetInput(&m_input);
-    m_window.SetOnResize([this](uint32_t w, uint32_t h) { m_gfx.Resize(w, h); });
+    m_window.SetOnResize([this](uint32_t w, uint32_t h) {
+        m_gfx.Resize(w, h);
+        m_camera.SetAspect(m_window.Aspect());
+    });
 
     if (!m_gfx.Initialize(m_window.Handle(), m_window.Width(), m_window.Height()))
         return false;
 
     const std::wstring exeDir = ExecutableDir();
     m_cube.Initialize(m_gfx.Device(), exeDir + L"\\shaders", exeDir + L"\\assets");
+
+    m_camera.SetPerspective(Math::ToRadians(60.0f), m_window.Aspect(), 0.1f, 100.0f);
 
     QueryPerformanceFrequency(reinterpret_cast<LARGE_INTEGER*>(&m_tickFreq));
     QueryPerformanceCounter(reinterpret_cast<LARGE_INTEGER*>(&m_startTick));
@@ -32,21 +37,19 @@ bool Application::Initialize() {
 }
 
 void Application::Frame(float dt, float time, bool capture) {
-    m_gfx.ClearBackbuffer(0.10f, 0.12f, 0.18f);   // 배경 + 깊이 버퍼 클리어
-
-    // --- MVP 조립 (Part 1.4) ---
     using Math::Matrix;
     using Math::Vector3;
-    // 모델: 두 축으로 천천히 회전 (큐브의 여러 면을 보여주기 위해)
-    Matrix model = Matrix::RotationY(time * 0.6f) * Matrix::RotationX(time * 0.3f);
-    // 뷰: 카메라를 (0, 0.4, -3)에 두고 +Z(앞)를 바라봄 (자유 카메라는 Part 5)
-    Matrix view = Matrix::LookToLH({ 0.0f, 0.4f, -3.0f }, Vector3::Forward(), Vector3::Up());
-    // 투영: 원근
-    Matrix proj = Matrix::PerspectiveFovLH(Math::ToRadians(60.0f), m_window.Aspect(), 0.1f, 100.0f);
 
-    Matrix mvp = model * view * proj;
+    // 입력 → 카메라 갱신 (우클릭 시점 회전 + WASD 이동)
+    m_camController.Update(m_input, m_camera, dt);
 
-    // 방향광: "빛으로 향하는" 단위 방향 (해가 이쪽에서 비춘다)
+    m_gfx.ClearBackbuffer(0.10f, 0.12f, 0.18f);   // 배경 + 깊이 버퍼 클리어
+
+    // 모델: 천천히 회전하는 큐브 (카메라로 둘러볼 대상)
+    Matrix model = Matrix::RotationY(time * 0.3f);
+    // 뷰·투영은 이제 카메라에서 가져온다 (Part 1.4 + Part 5)
+    Matrix mvp = model * m_camera.ViewProj();
+
     Vector3 lightDir = Vector3(0.4f, 0.8f, 0.3f).Normalized();
     m_cube.Render(m_gfx.Context(), mvp, model, lightDir);
 
