@@ -3,6 +3,7 @@
 #include "app/Win32Window.h"
 #include "app/Input.h"
 #include "core/GraphicsDevice.h"
+#include "render/TriangleRenderer.h"
 #include <cstdint>
 #include <string>
 
@@ -10,23 +11,26 @@ namespace app {
 
 // =============================================================================
 // Application — 엔진 전체를 조립하고 메인 루프를 도는 "지휘자".
-//   Part가 진행될수록 여기에 디바이스/렌더러/카메라/UI가 하나씩 추가됩니다.
-//   (Part 3.1: 창 + 입력 + DX11 디바이스 + 화면 클리어)
+//   (Part 3.2: 창 + 입력 + DX11 디바이스 + 삼각형)
 // =============================================================================
 class Application {
 public:
     bool Initialize();
-    void Run(int maxFrames = -1);
+
+    // maxFrames>=0 이면 그만큼만 돌고 종료(검증용).
+    // capturePath 가 있으면 마지막 프레임을 BMP로 저장(렌더 결과 눈으로 확인).
+    void Run(int maxFrames = -1, const wchar_t* capturePath = nullptr);
 
 private:
-    void Frame(float dt, float time);
-
-    // 실행 파일이 있는 폴더 경로 (셰이더/에셋을 여기 기준으로 로드)
+    void Frame(float dt, float time, bool capture);
     std::wstring ExecutableDir() const;
 
-    Win32Window          m_window;
-    Input                m_input;
-    core::GraphicsDevice m_gfx;
+    Win32Window              m_window;
+    Input                    m_input;
+    core::GraphicsDevice     m_gfx;
+    render::TriangleRenderer m_triangle;
+
+    std::wstring m_capturePath;
 
     int64_t m_tickFreq  = 0;
     int64_t m_startTick = 0;

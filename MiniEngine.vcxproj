@@ -83,6 +83,8 @@
     <ClCompile Include="src\app\Input.cpp" />
     <ClCompile Include="src\app\Application.cpp" />
     <ClCompile Include="src\core\GraphicsDevice.cpp" />
+    <ClCompile Include="src\render\ShaderUtil.cpp" />
+    <ClCompile Include="src\render\TriangleRenderer.cpp" />
     <ClCompile Include="src\math\Vector2.cpp" />
     <ClCompile Include="src\math\Vector3.cpp" />
     <ClCompile Include="src\math\Vector4.cpp" />
@@ -94,12 +96,26 @@
     <ClInclude Include="src\app\Application.h" />
     <ClInclude Include="src\core\DxCommon.h" />
     <ClInclude Include="src\core\GraphicsDevice.h" />
+    <ClInclude Include="src\render\ShaderUtil.h" />
+    <ClInclude Include="src\render\TriangleRenderer.h" />
     <ClInclude Include="src\math\MathCommon.h" />
     <ClInclude Include="src\math\Vector2.h" />
     <ClInclude Include="src\math\Vector3.h" />
     <ClInclude Include="src\math\Vector4.h" />
     <ClInclude Include="src\math\Matrix.h" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="src\shaders\triangle.hlsl" />
+  </ItemGroup>
 
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+
+  <!-- HLSL 셰이더를 출력폴더의 shaders\ 로 복사 (런타임에 D3DCompileFromFile 로 로드) -->
+  <Target Name="CopyShaders" AfterTargets="Build">
+    <ItemGroup>
+      <ShaderFiles Include="$(SolutionDir)src\shaders\*.hlsl" />
+    </ItemGroup>
+    <MakeDir Directories="$(OutDir)shaders" />
+    <Copy SourceFiles="@(ShaderFiles)" DestinationFolder="$(OutDir)shaders" SkipUnchangedFiles="true" />
+  </Target>
 </Project>

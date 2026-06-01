@@ -23,6 +23,9 @@ public:
     // 다 그린 백버퍼를 화면에 표시 (vsync=true면 수직동기화 대기 → 동기화 역할).
     void Present(bool vsync = true);
 
+    // 현재 백버퍼를 BMP 파일로 저장 (렌더 결과를 눈으로 검증할 때 사용 — Present 전에 호출).
+    bool CaptureBackbufferToBMP(const wchar_t* path);
+
     ID3D11Device*           Device()        const { return m_device.Get(); }
     ID3D11DeviceContext*    Context()       const { return m_context.Get(); }
     ID3D11RenderTargetView* BackbufferRTV() const { return m_backbufferRTV.Get(); }

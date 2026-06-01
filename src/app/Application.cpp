@@ -12,15 +12,15 @@ std::wstring Application::ExecutableDir() const {
 }
 
 bool Application::Initialize() {
-    if (!m_window.Create(L"MiniEngine (Part 3.1) - 화면 클리어", 1280, 720))
+    if (!m_window.Create(L"MiniEngine (Part 3.2) - 첫 삼각형", 1280, 720))
         return false;
     m_window.SetInput(&m_input);
-
-    // 창 크기가 바뀌면 스왑체인 백버퍼도 다시 만든다.
     m_window.SetOnResize([this](uint32_t w, uint32_t h) { m_gfx.Resize(w, h); });
 
     if (!m_gfx.Initialize(m_window.Handle(), m_window.Width(), m_window.Height()))
         return false;
+
+    m_triangle.Initialize(m_gfx.Device(), ExecutableDir() + L"\\shaders");
 
     QueryPerformanceFrequency(reinterpret_cast<LARGE_INTEGER*>(&m_tickFreq));
     QueryPerformanceCounter(reinterpret_cast<LARGE_INTEGER*>(&m_startTick));
@@ -28,19 +28,20 @@ bool Application::Initialize() {
     return true;
 }
 
-void Application::Frame(float dt, float time) {
-    // 시간에 따라 부드럽게 변하는 배경색 — "매 프레임 화면이 갱신된다"는 증거.
-    float r = 0.5f + 0.5f * std::sin(time * 0.7f);
-    float g = 0.5f + 0.5f * std::sin(time * 0.7f + 2.0f);
-    float b = 0.5f + 0.5f * std::sin(time * 0.7f + 4.0f);
+void Application::Frame(float dt, float time, bool capture) {
+    m_gfx.ClearBackbuffer(0.10f, 0.12f, 0.18f);   // 어두운 남색 배경
+    m_triangle.Render(m_gfx.Context());            // 그 위에 삼각형
 
-    m_gfx.ClearBackbuffer(r, g, b);
+    if (capture && !m_capturePath.empty())
+        m_gfx.CaptureBackbufferToBMP(m_capturePath.c_str());   // Present 전에 캡처
+
     m_gfx.Present(true);
-
     m_input.EndFrame();
 }
 
-void Application::Run(int maxFrames) {
+void Application::Run(int maxFrames, const wchar_t* capturePath) {
+    if (capturePath) m_capturePath = capturePath;
+
     int frame = 0;
     while (m_window.PumpMessages()) {
         int64_t now;
@@ -49,10 +50,11 @@ void Application::Run(int maxFrames) {
         const float time = static_cast<float>(double(now - m_startTick) / double(m_tickFreq));
         m_lastTick = now;
 
-        Frame(dt, time);
+        const bool last = (maxFrames >= 0 && frame + 1 >= maxFrames);
+        Frame(dt, time, /*capture=*/last);
 
-        if (maxFrames >= 0 && ++frame >= maxFrames)
-            break;
+        if (last) break;
+        ++frame;
     }
 }
 

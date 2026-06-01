@@ -1,4 +1,6 @@
 #include "core/GraphicsDevice.h"
+#include <vector>
+#include <cstdio>
 
 namespace core {
 
@@ -88,6 +90,64 @@ void GraphicsDevice::ClearBackbuffer(float r, float g, float b, float a) {
 
 void GraphicsDevice::Present(bool vsync) {
     m_swapChain->Present(vsync ? 1 : 0, 0);
+}
+
+// 백버퍼를 CPU로 복사해 32비트 BMP로 저장한다. (검증/디버깅 전용)
+//   백버퍼는 GPU 전용이라 바로 못 읽음 → STAGING 텍스처로 복사 후 Map 으로 읽는다.
+bool GraphicsDevice::CaptureBackbufferToBMP(const wchar_t* path) {
+    ComPtr<ID3D11Texture2D> back;
+    if (FAILED(m_swapChain->GetBuffer(0, IID_PPV_ARGS(&back)))) return false;
+
+    D3D11_TEXTURE2D_DESC desc{};
+    back->GetDesc(&desc);
+
+    D3D11_TEXTURE2D_DESC sdesc = desc;
+    sdesc.Usage          = D3D11_USAGE_STAGING;      // CPU가 읽을 수 있는 텍스처
+    sdesc.BindFlags      = 0;
+    sdesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+    sdesc.MiscFlags      = 0;
+    ComPtr<ID3D11Texture2D> staging;
+    if (FAILED(m_device->CreateTexture2D(&sdesc, nullptr, &staging))) return false;
+
+    m_context->CopyResource(staging.Get(), back.Get());   // GPU→CPU 복사
+
+    D3D11_MAPPED_SUBRESOURCE map{};
+    if (FAILED(m_context->Map(staging.Get(), 0, D3D11_MAP_READ, 0, &map))) return false;
+
+    const uint32_t W = desc.Width, H = desc.Height;
+    const uint32_t rowBytes = W * 4;
+    const uint32_t imgBytes = rowBytes * H;
+
+#pragma pack(push, 1)
+    struct BmpFileHeader { uint16_t type; uint32_t size; uint16_t r1, r2; uint32_t off; };
+    struct BmpInfoHeader { uint32_t size; int32_t w, h; uint16_t planes, bpp;
+                           uint32_t comp, imgSize; int32_t xppm, yppm; uint32_t clrUsed, clrImp; };
+#pragma pack(pop)
+    BmpFileHeader fh{ 0x4D42, uint32_t(54 + imgBytes), 0, 0, 54 };
+    BmpInfoHeader ih{ 40, int32_t(W), -int32_t(H), 1, 32, 0, imgBytes, 0, 0, 0, 0 };  // h<0 = 위에서 아래로
+
+    FILE* f = nullptr;
+    _wfopen_s(&f, path, L"wb");
+    if (!f) { m_context->Unmap(staging.Get(), 0); return false; }
+    fwrite(&fh, sizeof(fh), 1, f);
+    fwrite(&ih, sizeof(ih), 1, f);
+
+    // 백버퍼는 RGBA 순서, BMP는 BGRA 순서 → R/B 교환하며 한 줄씩 기록.
+    auto* src = static_cast<const uint8_t*>(map.pData);
+    std::vector<uint8_t> row(rowBytes);
+    for (uint32_t y = 0; y < H; ++y) {
+        const uint8_t* s = src + y * map.RowPitch;
+        for (uint32_t x = 0; x < W; ++x) {
+            row[x*4+0] = s[x*4+2];  // B
+            row[x*4+1] = s[x*4+1];  // G
+            row[x*4+2] = s[x*4+0];  // R
+            row[x*4+3] = s[x*4+3];  // A
+        }
+        fwrite(row.data(), rowBytes, 1, f);
+    }
+    fclose(f);
+    m_context->Unmap(staging.Get(), 0);
+    return true;
 }
 
 } // namespace core

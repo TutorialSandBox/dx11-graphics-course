@@ -19,3 +19,7 @@ x64/
 
 # ImGui 설정 캐시
 imgui.ini
+
+# 검증용 캡처 산출물
+_verify*
+*.bmp
