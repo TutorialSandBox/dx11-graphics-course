@@ -1,0 +1,218 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+build_book.py — 레슨 문서들을 한 권의 "책"으로 엮는다.
+  출력 1: MiniEngine-DX11-Book.html  (자체완결: 이미지 내장 + 사이드바 목차 + 코드 하이라이트)
+  출력 2: MiniEngine-DX11-Book.md    (GitHub에서 한 페이지로 읽는 단일 마크다운)
+
+사용:  python book/build_book.py
+필요:  pip install markdown pygments
+"""
+import os, re, base64, mimetypes
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUT_DIR = os.path.join(ROOT, "book")
+
+# (파트 제목, [소스 문서 상대경로 ...]) — 읽기 순서
+PARTS = [
+    ("머리말 · 커리큘럼", ["README.md"]),
+    ("Part 0 — 준비: 큰 그림", [
+        "docs/00-foundations/0.1-graphics-pipeline.md",
+        "docs/00-foundations/0.2-coordinate-systems.md",
+        "docs/00-foundations/0.3-project-setup.md"]),
+    ("Part 1 — 수학", [
+        "docs/01-math/1.1-vectors.md",
+        "docs/01-math/1.2-matrices.md",
+        "docs/01-math/1.3-transforms.md",
+        "docs/01-math/1.4-view-projection.md"]),
+    ("Part 2 — 창과 입력", [
+        "docs/02-window/2.1-win32-window.md",
+        "docs/02-window/2.2-input.md"]),
+    ("Part 3 — 첫 삼각형", [
+        "docs/03-triangle/3.1-device-swapchain.md",
+        "docs/03-triangle/3.2-first-triangle.md",
+        "docs/03-triangle/3.3-constant-buffer.md"]),
+    ("Part 4 — 3D 큐브", [
+        "docs/04-cube/4.1-cube-depth.md",
+        "docs/04-cube/4.2-texture.md",
+        "docs/04-cube/4.3-lighting.md"]),
+    ("Part 5 — 자유비행 카메라", ["docs/05-camera/5.1-camera.md"]),
+    ("Part 6 — ImGui 에디터", ["docs/06-imgui/6.1-imgui.md"]),
+    ("Part 7 — 디퍼드 렌더링", [
+        "docs/07-deferred/7.1-gbuffer.md",
+        "docs/07-deferred/7.2-point-lights.md"]),
+    ("부록 · 게임 수학", ["docs/appendix/game-math.md"]),
+    ("AI 튜터 프롬프트", ["TUTOR_PROMPT.md"]),
+]
+
+FENCE = re.compile(r"^\s*```")
+HEADING = re.compile(r"^(#{1,6})\s")
+# 이미지가 아닌(앞에 ! 없는), http/#앵커가 아닌 링크 → 굵은 텍스트로 (책에선 죽은 링크 제거)
+DEAD_LINK = re.compile(r"(?<!\!)\[([^\]]+)\]\((?!https?://)(?!#)[^)]+\)")
+IMG = re.compile(r"!\[([^\]]*)\]\(([^)]+)\)")
+
+
+def shift_headings(text):
+    """코드 펜스 밖의 헤딩만 한 단계 깊게 (# → ##). 파트(#) 아래 레슨(##)이 되도록."""
+    out, in_fence = [], False
+    for line in text.split("\n"):
+        if FENCE.match(line):
+            in_fence = not in_fence
+            out.append(line); continue
+        if not in_fence and HEADING.match(line):
+            out.append("#" + line)
+        else:
+            out.append(line)
+    return "\n".join(out)
+
+
+def embed_images_base64(text, base_dir):
+    def repl(m):
+        alt, path = m.group(1), m.group(2).strip()
+        if path.startswith("http") or path.startswith("data:"):
+            return m.group(0)
+        fp = os.path.normpath(os.path.join(base_dir, path))
+        if not os.path.exists(fp):
+            return f"*(이미지 없음: {path})*"
+        mime = mimetypes.guess_type(fp)[0] or "image/png"
+        with open(fp, "rb") as f:
+            b64 = base64.b64encode(f.read()).decode("ascii")
+        return f"![{alt}](data:{mime};base64,{b64})"
+    return IMG.sub(repl, text)
+
+
+def rewrite_images_relpath(text, base_dir):
+    """MD 책용: 이미지 경로를 book/ 기준 상대경로로 (GitHub 렌더링)."""
+    def repl(m):
+        alt, path = m.group(1), m.group(2).strip()
+        if path.startswith("http") or path.startswith("data:"):
+            return m.group(0)
+        fp = os.path.normpath(os.path.join(base_dir, path))
+        rel = os.path.relpath(fp, OUT_DIR).replace("\\", "/")
+        return f"![{alt}]({rel})"
+    return IMG.sub(repl, text)
+
+
+def neutralize_links(text):
+    return DEAD_LINK.sub(r"**\1**", text)
+
+
+def load_doc(relpath):
+    with open(os.path.join(ROOT, relpath), "r", encoding="utf-8") as f:
+        return f.read()
+
+
+def build_markdown(for_html):
+    """파트별로 문서를 엮어 하나의 마크다운 문자열 생성."""
+    chunks = []
+    for part_title, docs in PARTS:
+        chunks.append(f"\n\n# {part_title}\n")
+        for rel in docs:
+            base_dir = os.path.dirname(os.path.join(ROOT, rel))
+            text = load_doc(rel)
+            text = shift_headings(text)
+            if for_html:
+                text = embed_images_base64(text, base_dir)
+            else:
+                text = rewrite_images_relpath(text, base_dir)
+            text = neutralize_links(text)
+            chunks.append(text)
+            chunks.append("\n\n---\n")
+    return "\n".join(chunks)
+
+
+HTML_TEMPLATE = """<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DX11로 배우는 컴퓨터 그래픽스</title>
+<style>
+:root {{ --fg:#222; --muted:#666; --accent:#2b6cb0; --bg:#fff; --code-bg:#f6f8fa; --border:#e2e8f0; }}
+* {{ box-sizing: border-box; }}
+body {{ margin:0; color:var(--fg); background:var(--bg);
+  font-family:"Malgun Gothic","맑은 고딕","Apple SD Gothic Neo",system-ui,sans-serif;
+  line-height:1.75; }}
+#sidebar {{ position:fixed; top:0; left:0; width:300px; height:100vh; overflow-y:auto;
+  border-right:1px solid var(--border); padding:20px 16px; background:#fafbfc; font-size:14px; }}
+#sidebar h2 {{ font-size:15px; margin:0 0 10px; color:var(--accent); }}
+#sidebar .toc ul {{ list-style:none; padding-left:14px; margin:4px 0; }}
+#sidebar .toc > ul {{ padding-left:0; }}
+#sidebar .toc a {{ color:#334; text-decoration:none; display:block; padding:2px 0; }}
+#sidebar .toc a:hover {{ color:var(--accent); }}
+#sidebar .toc > ul > li > a {{ font-weight:700; margin-top:8px; color:#111; }}
+#content {{ margin-left:300px; padding:48px 56px; max-width:880px; }}
+h1 {{ border-bottom:2px solid var(--accent); padding-bottom:8px; margin-top:64px; }}
+h2 {{ border-bottom:1px solid var(--border); padding-bottom:5px; margin-top:44px; }}
+h3 {{ margin-top:30px; }}
+code {{ background:var(--code-bg); padding:2px 5px; border-radius:4px; font-size:0.9em;
+  font-family:Consolas,"D2Coding",monospace; }}
+pre {{ background:var(--code-bg); border:1px solid var(--border); border-radius:8px;
+  padding:14px 16px; overflow-x:auto; line-height:1.5; }}
+pre code {{ background:none; padding:0; }}
+img {{ max-width:100%; border-radius:8px; box-shadow:0 1px 6px rgba(0,0,0,.12); display:block; margin:16px auto; }}
+table {{ border-collapse:collapse; margin:16px 0; width:100%; font-size:0.95em; }}
+th,td {{ border:1px solid var(--border); padding:7px 11px; text-align:left; }}
+th {{ background:#f1f5f9; }}
+blockquote {{ border-left:4px solid var(--accent); margin:16px 0; padding:6px 16px;
+  background:#f7fafc; color:#374; border-radius:0 6px 6px 0; }}
+details {{ background:#f7fafc; border:1px solid var(--border); border-radius:8px; padding:10px 14px; margin:14px 0; }}
+summary {{ cursor:pointer; font-weight:700; color:var(--accent); }}
+hr {{ border:none; border-top:1px dashed var(--border); margin:36px 0; }}
+a {{ color:var(--accent); }}
+.cover {{ text-align:center; padding:60px 0 30px; }}
+.cover h1 {{ border:none; font-size:34px; }}
+.cover p {{ color:var(--muted); }}
+@media print {{ #sidebar{{display:none}} #content{{margin:0;max-width:100%}} }}
+</style>
+</head>
+<body>
+<nav id="sidebar"><h2>목차</h2>{toc}</nav>
+<main id="content">
+<div class="cover">
+  <h1>DX11로 배우는 컴퓨터 그래픽스</h1>
+  <p>빈 화면에서 디퍼드 렌더링까지, 한 줄씩 쌓아 올리는 1:1 그래픽스 강의</p>
+  <p style="font-size:13px">코드 + 설명을 한 권으로 · Jin02</p>
+</div>
+{body}
+</main>
+</body>
+</html>
+"""
+
+
+def main():
+    import markdown
+    from pygments.formatters import HtmlFormatter
+
+    # --- HTML 책 ---
+    md_html = build_markdown(for_html=True)
+    # <details>/<summary> 안의 마크다운도 렌더되도록 md_in_html 사용
+    md_html = md_html.replace("<details>", '<details markdown="1">')
+    md = markdown.Markdown(extensions=[
+        "extra", "tables", "fenced_code", "codehilite", "toc", "md_in_html",
+    ], extension_configs={
+        "codehilite": {"guess_lang": False},
+        "toc": {"toc_depth": "1-2"},
+    })
+    body = md.convert(md_html)
+    pyg_css = HtmlFormatter().get_style_defs(".codehilite")
+    html = HTML_TEMPLATE.format(toc=md.toc, body=body)
+    html = html.replace("</style>", pyg_css + "\n</style>", 1)
+    out_html = os.path.join(OUT_DIR, "MiniEngine-DX11-Book.html")
+    with open(out_html, "w", encoding="utf-8") as f:
+        f.write(html)
+    print(f"[OK] HTML 책: {out_html}  ({os.path.getsize(out_html)//1024} KB)")
+
+    # --- 마크다운 책 (GitHub용) ---
+    md_book = "# DX11로 배우는 컴퓨터 그래픽스 — 통합본\n\n" \
+              "> 모든 레슨을 한 페이지로 엮은 책 버전입니다. (생성: `python book/build_book.py`)\n" \
+              + build_markdown(for_html=False)
+    out_md = os.path.join(OUT_DIR, "MiniEngine-DX11-Book.md")
+    with open(out_md, "w", encoding="utf-8") as f:
+        f.write(md_book)
+    print(f"[OK] MD 책:   {out_md}  ({os.path.getsize(out_md)//1024} KB)")
+
+
+if __name__ == "__main__":
+    main()
