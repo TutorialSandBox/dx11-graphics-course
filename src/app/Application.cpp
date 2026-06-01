@@ -12,7 +12,7 @@ std::wstring Application::ExecutableDir() const {
 }
 
 bool Application::Initialize() {
-    if (!m_window.Create(L"MiniEngine (Part 3.2) - 첫 삼각형", 1280, 720))
+    if (!m_window.Create(L"MiniEngine (Part 3.3) - 상수 버퍼로 삼각형 회전", 1280, 720))
         return false;
     m_window.SetInput(&m_input);
     m_window.SetOnResize([this](uint32_t w, uint32_t h) { m_gfx.Resize(w, h); });
@@ -30,7 +30,14 @@ bool Application::Initialize() {
 
 void Application::Frame(float dt, float time, bool capture) {
     m_gfx.ClearBackbuffer(0.10f, 0.12f, 0.18f);   // 어두운 남색 배경
-    m_triangle.Render(m_gfx.Context());            // 그 위에 삼각형
+
+    // 시간에 따라 Z축 회전 + 종횡비 보정(x를 1/aspect 로 줄여 삼각형이 안 찌그러지게).
+    //   행벡터 규약: v * (Rotation * AspectScale) = 먼저 회전, 그 다음 화면비 보정.
+    const float aspect = m_window.Aspect();
+    Math::Matrix transform =
+        Math::Matrix::RotationZ(time) *
+        Math::Matrix::Scaling({ 1.0f / aspect, 1.0f, 1.0f });
+    m_triangle.Render(m_gfx.Context(), transform);
 
     if (capture && !m_capturePath.empty())
         m_gfx.CaptureBackbufferToBMP(m_capturePath.c_str());   // Present 전에 캡처

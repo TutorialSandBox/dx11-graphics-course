@@ -50,11 +50,28 @@ void TriangleRenderer::Initialize(ID3D11Device* device, const std::wstring& shad
     rs.FillMode = D3D11_FILL_SOLID;
     rs.CullMode = D3D11_CULL_NONE;
     Hr(device->CreateRasterizerState(&rs, &m_rasterState), "CreateRasterizerState");
+
+    // 5) 상수 버퍼 — 매 프레임 바뀌는 행렬을 담을 GPU 버퍼.
+    //    DYNAMIC + CPU_WRITE: CPU가 매 프레임 Map 으로 새 값을 써넣을 수 있음.
+    //    ByteWidth 는 16의 배수여야 함 (float4x4 = 64바이트, OK).
+    D3D11_BUFFER_DESC cbd{};
+    cbd.ByteWidth      = sizeof(Math::Matrix);   // 64
+    cbd.Usage          = D3D11_USAGE_DYNAMIC;
+    cbd.BindFlags      = D3D11_BIND_CONSTANT_BUFFER;
+    cbd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+    Hr(device->CreateBuffer(&cbd, nullptr, &m_constantBuffer), "CreateBuffer(constant)");
 }
 
-void TriangleRenderer::Render(ID3D11DeviceContext* ctx) {
+void TriangleRenderer::Render(ID3D11DeviceContext* ctx, const Math::Matrix& transform) {
+    // 상수 버퍼 갱신: Map 으로 잠그고 → 행렬 복사 → Unmap.
+    D3D11_MAPPED_SUBRESOURCE mapped{};
+    ctx->Map(m_constantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+    memcpy(mapped.pData, &transform, sizeof(Math::Matrix));
+    ctx->Unmap(m_constantBuffer.Get(), 0);
+
     UINT offset = 0;
     ID3D11Buffer* vb = m_vertexBuffer.Get();
+    ID3D11Buffer* cb = m_constantBuffer.Get();
 
     // IA = Input Assembler: 정점을 모아 셰이더에 공급하는 단계
     ctx->IASetInputLayout(m_inputLayout.Get());
@@ -63,6 +80,7 @@ void TriangleRenderer::Render(ID3D11DeviceContext* ctx) {
 
     ctx->RSSetState(m_rasterState.Get());
     ctx->VSSetShader(m_vs.Get(), nullptr, 0);
+    ctx->VSSetConstantBuffers(0, 1, &cb);   // register(b0) 에 연결
     ctx->PSSetShader(m_ps.Get(), nullptr, 0);
 
     ctx->Draw(m_vertexCount, 0);   // 그려라!
