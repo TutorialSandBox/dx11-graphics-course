@@ -1,0 +1,9 @@
+# 소스/문서는 LF, Windows 배치 파일은 CRLF로 고정.
+*           text=auto
+*.bat       text eol=crlf
+*.sln       text eol=crlf
+*.vcxproj   text eol=crlf
+*.cpp       text
+*.h         text
+*.hlsl      text
+*.md        text
