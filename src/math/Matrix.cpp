@@ -1,4 +1,5 @@
 #include "math/Matrix.h"
+#include <cmath>
 
 namespace Math {
 
@@ -46,6 +47,58 @@ Vector4 operator*(const Vector4& v, const Matrix& mat) {
         v.x*mat._13 + v.y*mat._23 + v.z*mat._33 + v.w*mat._43,
         v.x*mat._14 + v.y*mat._24 + v.z*mat._34 + v.w*mat._44
     };
+}
+
+// ---- 변환 행렬 (1.3) -------------------------------------------------------
+//   모두 "행벡터 v*M, 왼손 좌표계" 규약에 맞춰 작성. (DirectXMath와 동일)
+
+// 이동: 평행이동 성분은 맨 아래 행(_41,_42,_43)에 들어갑니다.
+//   (x,y,z,1) * T = (x+tx, y+ty, z+tz, 1)  ← w=1 일 때만 이동이 더해짐
+Matrix Matrix::Translation(const Vector3& t) {
+    Matrix r;                       // 항등에서 시작
+    r._41 = t.x; r._42 = t.y; r._43 = t.z;
+    return r;
+}
+
+// 스케일: 대각선에 배율.
+Matrix Matrix::Scaling(const Vector3& s) {
+    Matrix r;
+    r._11 = s.x; r._22 = s.y; r._33 = s.z;
+    return r;
+}
+Matrix Matrix::Scaling(float s) { return Scaling({ s, s, s }); }
+
+// 회전 (라디안). 부호 규약은 왼손 좌표계 기준.
+Matrix Matrix::RotationX(float a) {
+    float c = std::cos(a), s = std::sin(a);
+    Matrix r;
+    r._22 =  c; r._23 = s;
+    r._32 = -s; r._33 = c;
+    return r;
+}
+Matrix Matrix::RotationY(float a) {
+    float c = std::cos(a), s = std::sin(a);
+    Matrix r;
+    r._11 = c; r._13 = -s;
+    r._31 = s; r._33 =  c;
+    return r;
+}
+Matrix Matrix::RotationZ(float a) {
+    float c = std::cos(a), s = std::sin(a);
+    Matrix r;
+    r._11 =  c; r._12 = s;
+    r._21 = -s; r._22 = c;
+    return r;
+}
+
+// ---- 점/방향 변환 편의 함수 -------------------------------------------------
+Vector3 TransformPoint(const Vector3& p, const Matrix& m) {
+    Vector4 r = Vector4{ p, 1.0f } * m;   // 점이므로 w=1
+    return r.ToVector3DivW();              // 원근 나눗셈(÷w). 아핀 변환이면 w=1이라 그대로.
+}
+Vector3 TransformDirection(const Vector3& d, const Matrix& m) {
+    Vector4 r = Vector4{ d, 0.0f } * m;   // 방향이므로 w=0 → 이동 무시
+    return r.XYZ();
 }
 
 } // namespace Math

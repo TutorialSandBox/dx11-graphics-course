@@ -77,6 +77,40 @@ int main() {
     PrintMatrix("Transpose(A)", Matrix::Transpose(A));
     std::printf("  (A의 첫 '행' 1,2,3,4 가 Transpose(A)의 첫 '열'이 됨)\n");
 
+    // =====================================================================
+    std::printf("\n\n=== Part 1.3  변환 행렬 ===\n\n");
+
+    Vector3 origin{ 0, 0, 0 };
+    Vector3 px{ 1, 0, 0 };            // +X 위의 점
+
+    std::printf("[이동 (Translation)]\n");
+    Matrix T = Matrix::Translation({ 5, 0, 0 });
+    Print("점 (0,0,0)", origin);
+    Print("→ T(+5,0,0)", Math::TransformPoint(origin, T));   // (5,0,0)
+
+    std::printf("\n[스케일 (Scaling)]\n");
+    Matrix S = Matrix::Scaling(2.0f);
+    Print("점 (1,0,0)", px);
+    Print("→ S(x2)", Math::TransformPoint(px, S));           // (2,0,0)
+
+    std::printf("\n[회전 (RotationZ 90도)]\n");
+    Matrix Rz = Matrix::RotationZ(Math::ToRadians(90.0f));
+    Print("점 (1,0,0)", px);
+    Print("→ Rz(90)", Math::TransformPoint(px, Rz));         // ≈ (0,1,0)
+    std::printf("  (+X 위의 점이 +Y로 회전)\n");
+
+    std::printf("\n[합성: 먼저 회전, 그 다음 이동  (Rz * T)]\n");
+    // 행벡터 규약: v * (Rz * T) = (v * Rz) * T  →  왼쪽부터 차례로 적용
+    Matrix RzT = Rz * T;
+    Print("점 (1,0,0)", px);
+    Print("→ Rz then T", Math::TransformPoint(px, RzT));     // 회전(0,1,0) 후 +5 → (5,1,0)
+    std::printf("  (순서 중요! T * Rz 와 결과가 다름)\n");
+    Print("→ T then Rz", Math::TransformPoint(px, T * Rz));  // 이동(6,0,0) 후 회전 → (0,6,0)
+
+    std::printf("\n[방향은 이동에 영향 안 받음]\n");
+    Print("방향 (1,0,0)", Math::TransformDirection(px, T));  // 이동해도 (1,0,0) 그대로
+    std::printf("  (TransformDirection 은 w=0 이라 이동 무시)\n");
+
     std::printf("\n완료.\n");
     return 0;
 }
