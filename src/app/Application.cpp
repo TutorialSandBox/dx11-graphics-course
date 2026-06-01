@@ -1,4 +1,5 @@
 #include "app/Application.h"
+#include "editor/EditorUI.h"
 #include "math/MathCommon.h"
 #include "math/Vector3.h"
 #include <Windows.h>
@@ -14,7 +15,7 @@ std::wstring Application::ExecutableDir() const {
 }
 
 bool Application::Initialize() {
-    if (!m_window.Create(L"MiniEngine (Part 5) - 자유비행 카메라 (우클릭+WASD)", 1280, 720))
+    if (!m_window.Create(L"MiniEngine (Part 6) - ImGui 에디터", 1280, 720))
         return false;
     m_window.SetInput(&m_input);
     m_window.SetOnResize([this](uint32_t w, uint32_t h) {
@@ -30,6 +31,12 @@ bool Application::Initialize() {
 
     m_camera.SetPerspective(Math::ToRadians(60.0f), m_window.Aspect(), 0.1f, 100.0f);
 
+    // ImGui 초기화 + 윈도우 메시지를 ImGui로도 전달하도록 후크 연결
+    m_ui.Initialize(m_window.Handle(), m_gfx.Device(), m_gfx.Context());
+    m_window.SetMessageHook([this](HWND h, UINT m, WPARAM w, LPARAM l) {
+        return m_ui.ProcessMessage(h, m, w, l);
+    });
+
     QueryPerformanceFrequency(reinterpret_cast<LARGE_INTEGER*>(&m_tickFreq));
     QueryPerformanceCounter(reinterpret_cast<LARGE_INTEGER*>(&m_startTick));
     m_lastTick = m_startTick;
@@ -40,18 +47,26 @@ void Application::Frame(float dt, float time, bool capture) {
     using Math::Matrix;
     using Math::Vector3;
 
-    // 입력 → 카메라 갱신 (우클릭 시점 회전 + WASD 이동)
-    m_camController.Update(m_input, m_camera, dt);
+    // UI 프레임 시작 → 패널 구성 (그리기는 씬 다음에)
+    m_ui.BeginFrame();
+    editor::FrameInfo fi;
+    fi.fps       = dt > 0.0f ? 1.0f / dt : 0.0f;
+    fi.frameMs   = dt * 1000.0f;
+    fi.cameraPos = m_camera.Eye();
+    editor::DrawEditor(fi);
+
+    // 입력 → 카메라. 단, UI가 마우스/키보드를 점유 중이면 카메라 조작 금지.
+    if (!m_ui.WantCaptureMouse() && !m_ui.WantCaptureKeyboard())
+        m_camController.Update(m_input, m_camera, dt);
 
     m_gfx.ClearBackbuffer(0.10f, 0.12f, 0.18f);   // 배경 + 깊이 버퍼 클리어
 
-    // 모델: 천천히 회전하는 큐브 (카메라로 둘러볼 대상)
     Matrix model = Matrix::RotationY(time * 0.3f);
-    // 뷰·투영은 이제 카메라에서 가져온다 (Part 1.4 + Part 5)
-    Matrix mvp = model * m_camera.ViewProj();
-
+    Matrix mvp   = model * m_camera.ViewProj();
     Vector3 lightDir = Vector3(0.4f, 0.8f, 0.3f).Normalized();
     m_cube.Render(m_gfx.Context(), mvp, model, lightDir);
+
+    m_ui.Render();   // 씬 위에 UI 합성
 
     if (capture && !m_capturePath.empty())
         m_gfx.CaptureBackbufferToBMP(m_capturePath.c_str());   // Present 전에 캡처
@@ -77,6 +92,7 @@ void Application::Run(int maxFrames, const wchar_t* capturePath) {
         if (last) break;
         ++frame;
     }
+    m_ui.Shutdown();   // 종료 정리
 }
 
 } // namespace app

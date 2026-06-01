@@ -6,6 +6,7 @@
 #include "render/CubeRenderer.h"
 #include "render/Camera.h"
 #include "render/EditorCameraController.h"
+#include "editor/ImGuiLayer.h"
 #include <cstdint>
 #include <string>
 
@@ -33,6 +34,7 @@ private:
     render::CubeRenderer           m_cube;
     render::Camera                 m_camera;
     render::EditorCameraController m_camController;
+    editor::ImGuiLayer             m_ui;
 
     std::wstring m_capturePath;
 

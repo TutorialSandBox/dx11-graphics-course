@@ -53,7 +53,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <!-- /utf-8 필수: 한글 주석을 올바로 읽게 함 (Part 0.3 참고) -->
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalIncludeDirectories>$(SolutionDir)src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)src;$(SolutionDir)third_party\imgui;$(SolutionDir)third_party\imgui\backends;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <!-- main() 진입점을 쓰면서 콘솔 창은 안 띄움 (Windows 서브시스템 + mainCRTStartup) -->
@@ -88,10 +88,20 @@
     <ClCompile Include="src\render\CubeRenderer.cpp" />
     <ClCompile Include="src\render\Texture.cpp" />
     <ClCompile Include="src\render\EditorCameraController.cpp" />
+    <ClCompile Include="src\editor\ImGuiLayer.cpp" />
+    <ClCompile Include="src\editor\EditorUI.cpp" />
     <ClCompile Include="src\math\Vector2.cpp" />
     <ClCompile Include="src\math\Vector3.cpp" />
     <ClCompile Include="src\math\Vector4.cpp" />
     <ClCompile Include="src\math\Matrix.cpp" />
+    <!-- Dear ImGui (코어 + win32/dx11 백엔드) -->
+    <ClCompile Include="third_party\imgui\imgui.cpp" />
+    <ClCompile Include="third_party\imgui\imgui_draw.cpp" />
+    <ClCompile Include="third_party\imgui\imgui_tables.cpp" />
+    <ClCompile Include="third_party\imgui\imgui_widgets.cpp" />
+    <ClCompile Include="third_party\imgui\imgui_demo.cpp" />
+    <ClCompile Include="third_party\imgui\backends\imgui_impl_win32.cpp" />
+    <ClCompile Include="third_party\imgui\backends\imgui_impl_dx11.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\app\Win32Window.h" />
@@ -106,6 +116,8 @@
     <ClInclude Include="src\render\Texture.h" />
     <ClInclude Include="src\render\Camera.h" />
     <ClInclude Include="src\render\EditorCameraController.h" />
+    <ClInclude Include="src\editor\ImGuiLayer.h" />
+    <ClInclude Include="src\editor\EditorUI.h" />
     <ClInclude Include="src\math\MathCommon.h" />
     <ClInclude Include="src\math\Vector2.h" />
     <ClInclude Include="src\math\Vector3.h" />
