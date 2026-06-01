@@ -1,0 +1,20 @@
+# 빌드 산출물
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+*.exe
+*.obj
+*.pdb
+*.ilk
+*.exp
+*.lib
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# ImGui 설정 캐시
+imgui.ini
