@@ -1,17 +1,27 @@
 #include "app/Application.h"
 #include <Windows.h>
-#include <cstdio>
-#include <cwchar>
+#include <cmath>
 
 namespace app {
 
+std::wstring Application::ExecutableDir() const {
+    wchar_t buf[MAX_PATH];
+    GetModuleFileNameW(nullptr, buf, MAX_PATH);
+    std::wstring path(buf);
+    return path.substr(0, path.find_last_of(L"\\/"));
+}
+
 bool Application::Initialize() {
-    if (!m_window.Create(L"MiniEngine (Part 2) - Win32 창과 입력", 1280, 720))
+    if (!m_window.Create(L"MiniEngine (Part 3.1) - 화면 클리어", 1280, 720))
+        return false;
+    m_window.SetInput(&m_input);
+
+    // 창 크기가 바뀌면 스왑체인 백버퍼도 다시 만든다.
+    m_window.SetOnResize([this](uint32_t w, uint32_t h) { m_gfx.Resize(w, h); });
+
+    if (!m_gfx.Initialize(m_window.Handle(), m_window.Width(), m_window.Height()))
         return false;
 
-    m_window.SetInput(&m_input);   // 키/마우스 메시지를 Input 으로 보내라
-
-    // 고해상도 타이머 준비 (프레임 간 경과시간 dt 측정용)
     QueryPerformanceFrequency(reinterpret_cast<LARGE_INTEGER*>(&m_tickFreq));
     QueryPerformanceCounter(reinterpret_cast<LARGE_INTEGER*>(&m_startTick));
     m_lastTick = m_startTick;
@@ -19,21 +29,15 @@ bool Application::Initialize() {
 }
 
 void Application::Frame(float dt, float time) {
-    // Part 2에는 아직 그릴 게 없습니다. 대신 입력 상태를 제목표시줄에 출력해
-    // "입력이 정말 들어오는지" 눈으로 확인합니다.
-    const float fps = dt > 0.0f ? 1.0f / dt : 0.0f;
+    // 시간에 따라 부드럽게 변하는 배경색 — "매 프레임 화면이 갱신된다"는 증거.
+    float r = 0.5f + 0.5f * std::sin(time * 0.7f);
+    float g = 0.5f + 0.5f * std::sin(time * 0.7f + 2.0f);
+    float b = 0.5f + 0.5f * std::sin(time * 0.7f + 4.0f);
 
-    wchar_t title[256];
-    std::swprintf(title, 256,
-        L"MiniEngine (Part 2)  |  %.0f FPS  |  W:%d A:%d S:%d D:%d  RMB:%d  마우스Δ(%.0f, %.0f)",
-        fps,
-        m_input.IsKeyDown('W'), m_input.IsKeyDown('A'),
-        m_input.IsKeyDown('S'), m_input.IsKeyDown('D'),
-        m_input.RightButtonDown(),
-        m_input.MouseDX(), m_input.MouseDY());
-    m_window.SetTitle(title);
+    m_gfx.ClearBackbuffer(r, g, b);
+    m_gfx.Present(true);
 
-    m_input.EndFrame();   // 이번 프레임의 마우스 델타 소비 → 0으로
+    m_input.EndFrame();
 }
 
 void Application::Run(int maxFrames) {
@@ -48,8 +52,7 @@ void Application::Run(int maxFrames) {
         Frame(dt, time);
 
         if (maxFrames >= 0 && ++frame >= maxFrames)
-            break;   // 스모크 테스트: 정해진 프레임 수 후 자동 종료
-        Sleep(1);    // CPU 100% 점유 방지 (학습용 — 실엔진은 다른 방식)
+            break;
     }
 }
 
