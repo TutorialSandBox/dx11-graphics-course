@@ -14,7 +14,9 @@ namespace render {
 class CubeRenderer {
 public:
     void Initialize(ID3D11Device* device, const std::wstring& shaderDir, const std::wstring& assetsDir);
-    void Render(ID3D11DeviceContext* ctx, const Math::Matrix& mvp);
+    // mvp: 위치 변환 / world: 법선 변환용 모델행렬 / lightDir: 빛으로 향하는 방향(단위)
+    void Render(ID3D11DeviceContext* ctx, const Math::Matrix& mvp,
+                const Math::Matrix& world, const Math::Vector3& lightDir);
 
 private:
     ComPtr<ID3D11Buffer>          m_vertexBuffer;

@@ -14,7 +14,7 @@ std::wstring Application::ExecutableDir() const {
 }
 
 bool Application::Initialize() {
-    if (!m_window.Create(L"MiniEngine (Part 4.2) - 텍스처 큐브", 1280, 720))
+    if (!m_window.Create(L"MiniEngine (Part 4.3) - 텍스처 + 조명 큐브", 1280, 720))
         return false;
     m_window.SetInput(&m_input);
     m_window.SetOnResize([this](uint32_t w, uint32_t h) { m_gfx.Resize(w, h); });
@@ -45,7 +45,10 @@ void Application::Frame(float dt, float time, bool capture) {
     Matrix proj = Matrix::PerspectiveFovLH(Math::ToRadians(60.0f), m_window.Aspect(), 0.1f, 100.0f);
 
     Matrix mvp = model * view * proj;
-    m_cube.Render(m_gfx.Context(), mvp);
+
+    // 방향광: "빛으로 향하는" 단위 방향 (해가 이쪽에서 비춘다)
+    Vector3 lightDir = Vector3(0.4f, 0.8f, 0.3f).Normalized();
+    m_cube.Render(m_gfx.Context(), mvp, model, lightDir);
 
     if (capture && !m_capturePath.empty())
         m_gfx.CaptureBackbufferToBMP(m_capturePath.c_str());   // Present 전에 캡처

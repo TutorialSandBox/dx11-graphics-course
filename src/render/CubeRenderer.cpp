@@ -9,6 +9,14 @@ namespace render {
 using Math::Vector2;
 using Math::Vector3;
 
+// 셰이더의 cbuffer Transform 과 메모리 배치가 일치해야 함 (각 필드 16바이트 정렬).
+//   float4x4(64) + float4x4(64) + float4(16) = 144바이트.
+struct CubeCB {
+    Math::Matrix mvp;
+    Math::Matrix world;
+    float lightDir[4];
+};
+
 // 큐브 메시 생성: 6면 × 4꼭짓점 = 24정점, 6면 × 2삼각형 × 3 = 36인덱스.
 //   왜 꼭짓점이 8개가 아니라 24개? 면마다 법선과 UV가 다르기 때문.
 //   (한 꼭짓점이 3면에 공유되면 법선을 하나로 정할 수 없음 → 면마다 따로 둠)
@@ -74,9 +82,9 @@ void CubeRenderer::Initialize(ID3D11Device* device, const std::wstring& shaderDi
     D3D11_SUBRESOURCE_DATA iinit{ indices.data() };
     Hr(device->CreateBuffer(&ibd, &iinit, &m_indexBuffer), "CreateBuffer(index)");
 
-    // 상수 버퍼 (MVP)
+    // 상수 버퍼 (MVP + World + 빛 방향)
     D3D11_BUFFER_DESC cbd{};
-    cbd.ByteWidth = sizeof(Math::Matrix);
+    cbd.ByteWidth = sizeof(CubeCB);
     cbd.Usage = D3D11_USAGE_DYNAMIC;
     cbd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
     cbd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
@@ -99,10 +107,17 @@ void CubeRenderer::Initialize(ID3D11Device* device, const std::wstring& shaderDi
     Hr(device->CreateSamplerState(&sd, &m_sampler), "CreateSamplerState");
 }
 
-void CubeRenderer::Render(ID3D11DeviceContext* ctx, const Math::Matrix& mvp) {
+void CubeRenderer::Render(ID3D11DeviceContext* ctx, const Math::Matrix& mvp,
+                          const Math::Matrix& world, const Math::Vector3& lightDir) {
+    CubeCB cbData;
+    cbData.mvp = mvp;
+    cbData.world = world;
+    cbData.lightDir[0] = lightDir.x; cbData.lightDir[1] = lightDir.y;
+    cbData.lightDir[2] = lightDir.z; cbData.lightDir[3] = 0.0f;
+
     D3D11_MAPPED_SUBRESOURCE mapped{};
     ctx->Map(m_constantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
-    memcpy(mapped.pData, &mvp, sizeof(Math::Matrix));
+    memcpy(mapped.pData, &cbData, sizeof(CubeCB));
     ctx->Unmap(m_constantBuffer.Get(), 0);
 
     UINT offset = 0;
