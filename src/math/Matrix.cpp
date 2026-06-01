@@ -91,6 +91,40 @@ Matrix Matrix::RotationZ(float a) {
     return r;
 }
 
+// ---- 카메라/투영 (1.4) -----------------------------------------------------
+
+// 뷰 행렬 (왼손). 카메라의 (오른쪽, 위, 앞) 축을 만들고, 세상을 카메라 기준으로 옮깁니다.
+Matrix Matrix::LookToLH(const Vector3& eye, const Vector3& forward, const Vector3& up) {
+    Vector3 zaxis = forward.Normalized();          // 앞(카메라가 보는 방향)
+    Vector3 xaxis = up.Cross(zaxis).Normalized();  // 오른쪽 = 위 × 앞  (왼손)
+    Vector3 yaxis = zaxis.Cross(xaxis);            // 진짜 위 = 앞 × 오른쪽
+
+    // 회전(축을 열로) + 이동(-eye를 각 축에 투영). 행벡터 규약 배치.
+    Matrix r;
+    r._11 = xaxis.x; r._12 = yaxis.x; r._13 = zaxis.x; r._14 = 0;
+    r._21 = xaxis.y; r._22 = yaxis.y; r._23 = zaxis.y; r._24 = 0;
+    r._31 = xaxis.z; r._32 = yaxis.z; r._33 = zaxis.z; r._34 = 0;
+    r._41 = -xaxis.Dot(eye);
+    r._42 = -yaxis.Dot(eye);
+    r._43 = -zaxis.Dot(eye);
+    r._44 = 1;
+    return r;
+}
+
+// 원근 투영 (왼손). 뷰 공간 → 클립 공간.
+//   yScale = 1/tan(fovY/2): 시야각이 좁을수록 확대(망원). xScale = yScale/aspect: 화면 비율 보정.
+//   _34=1 이 핵심: 결과 w에 뷰공간 z가 들어가, 나중에 ÷w 하면 멀수록 작아짐(원근).
+Matrix Matrix::PerspectiveFovLH(float fovY, float aspect, float zn, float zf) {
+    float yScale = 1.0f / std::tan(fovY * 0.5f);
+    float xScale = yScale / aspect;
+    Matrix r;
+    r._11 = xScale; r._12 = 0;      r._13 = 0;                    r._14 = 0;
+    r._21 = 0;      r._22 = yScale; r._23 = 0;                    r._24 = 0;
+    r._31 = 0;      r._32 = 0;      r._33 = zf / (zf - zn);       r._34 = 1;
+    r._41 = 0;      r._42 = 0;      r._43 = -zn * zf / (zf - zn); r._44 = 0;
+    return r;
+}
+
 // ---- 점/방향 변환 편의 함수 -------------------------------------------------
 Vector3 TransformPoint(const Vector3& p, const Matrix& m) {
     Vector4 r = Vector4{ p, 1.0f } * m;   // 점이므로 w=1

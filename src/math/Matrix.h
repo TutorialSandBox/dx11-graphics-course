@@ -45,6 +45,12 @@ struct Matrix {
     static Matrix RotationX(float radians);               // X축 둘레 회전
     static Matrix RotationY(float radians);               // Y축 둘레 회전
     static Matrix RotationZ(float radians);               // Z축 둘레 회전
+
+    // ---- 카메라/투영 (1.4) ----
+    // 뷰 행렬: 카메라를 원점에 두도록 온 세상을 옮김. (eye 위치에서 forward 방향을 봄)
+    static Matrix LookToLH(const Vector3& eye, const Vector3& forward, const Vector3& up);
+    // 원근 투영: 멀수록 작게. 시야각(fovY)·종횡비(aspect)·근/원 평면(near/far).
+    static Matrix PerspectiveFovLH(float fovYRadians, float aspect, float nearZ, float farZ);
 };
 
 // 행벡터 × 행렬:  result_j = Σ_i  v_i * m[i][j]

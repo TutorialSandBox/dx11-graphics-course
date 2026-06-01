@@ -111,6 +111,33 @@ int main() {
     Print("방향 (1,0,0)", Math::TransformDirection(px, T));  // 이동해도 (1,0,0) 그대로
     std::printf("  (TransformDirection 은 w=0 이라 이동 무시)\n");
 
+    // =====================================================================
+    std::printf("\n\n=== Part 1.4  뷰 · 투영 · MVP ===\n\n");
+
+    // 카메라: (0,1,-4)에서 +Z(앞)를 바라봄, 위는 +Y
+    Matrix view = Matrix::LookToLH({ 0, 1, -4 }, Vector3::Forward(), Vector3::Up());
+    // 원근: 시야각 45도, 16:9, near 0.1, far 100
+    Matrix proj = Matrix::PerspectiveFovLH(Math::ToRadians(45.0f), 16.0f / 9.0f, 0.1f, 100.0f);
+
+    Matrix model = Matrix::Identity();          // 큐브를 원점에 그대로
+    Matrix mvp   = model * view * proj;          // ★ MVP = Model * View * Projection
+
+    std::printf("[큐브 꼭짓점 (0.5, 0.5, 0.5) 를 MVP로]\n");
+    Vector4 clip = Vector4{ { 0.5f, 0.5f, 0.5f }, 1.0f } * mvp;   // 클립 공간 (w 포함)
+    Print4("clip", clip);
+    Print("NDC (÷w)", clip.ToVector3DivW());
+    std::printf("  clip.w = %.3f  ← 이 값으로 나누면 원근감이 생김\n", clip.w);
+
+    std::printf("\n[원근 효과: 같은 x라도 멀수록 화면에서 작게]\n");
+    // 카메라 앞쪽, 같은 x=1 이지만 z 깊이가 다른 두 점
+    Vector4 nearP = Vector4{ { 1, 0, 0 }, 1.0f } * mvp;   // 가까움
+    Vector4 farP  = Vector4{ { 1, 0, 8 }, 1.0f } * mvp;   // 멀리 (z 큼)
+    std::printf("  가까운 점 z=0 :  NDC.x = % .3f   (w=% .2f)\n",
+                nearP.ToVector3DivW().x, nearP.w);
+    std::printf("  먼   점 z=8 :  NDC.x = % .3f   (w=% .2f)\n",
+                farP.ToVector3DivW().x, farP.w);
+    std::printf("  → 먼 점일수록 w가 커지고, ÷w 하면 NDC.x가 0에 가까워짐(화면 중앙=작게 보임)\n");
+
     std::printf("\n완료.\n");
     return 0;
 }
